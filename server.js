@@ -165,15 +165,11 @@ app.use('/', router);
 const PORT = process.env.PORT || 8080;
 
 mongoose.connect(process.env.MONGO_URI)
-  .then(() => {
-    console.log('MongoDB connected');
-    app.listen(PORT, () => {
-      console.log(`Server is running on port ${PORT}`);
-    });
-  })
-  .catch(err => {
-    console.error('MongoDB connection failed:', err.message);
-    process.exit(1);
-  });
+  .then(() => console.log('MongoDB connected'))
+  .catch(err => console.error('MongoDB connection failed:', err.message));
+
+app.listen(PORT, () => {
+  console.log(`Server is running on port ${PORT}`);
+});
 
 module.exports = app;
