@@ -12,13 +12,13 @@ const Movie = require('./Movies'); // You're not using Movie, consider removing 
 
 const app = express();
 
-mongoose.connect(process.env.MONGO_URI)
-  .then(() => {
-    console.log("MongoDB connected")
-  })
-  .catch(err => {
-    console.log(err)
-  });
+if (!process.env.MONGO_URI) {
+  console.error('Missing MONGO_URI in environment');
+}
+if (!process.env.SECRET_KEY) {
+  console.error('Missing SECRET_KEY in environment');
+}
+
 app.use(cors());
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: false }));
@@ -45,12 +45,17 @@ router.post('/signup', async (req, res) => { // Use async/await
 
     res.status(201).json({ success: true, msg: 'Successfully created new user.' }); // 201 Created
   } catch (err) {
-    if (err.code === 11000) { // Strict equality check (===)
-      return res.status(409).json({ success: false, message: 'A user with that username already exists.' }); // 409 Conflict
-    } else {
-      console.error(err); // Log the error for debugging
-      return res.status(500).json({ success: false, message: 'Something went wrong. Please try again later.' }); // 500 Internal Server Error
+    console.error('Signup error:', err.message || err);
+    if (err.code === 11000) {
+      return res.status(409).json({ success: false, message: 'A user with that username already exists.' });
     }
+    if (err.name === 'ValidationError') {
+      return res.status(400).json({ success: false, message: err.message });
+    }
+    const message = process.env.DEBUG === 'true'
+      ? (err.message || String(err))
+      : 'Something went wrong. Please try again later.';
+    return res.status(500).json({ success: false, message });
   }
 });
 
@@ -157,9 +162,18 @@ router.route('/movies/:title')
 
 app.use('/', router);
 
-const PORT = process.env.PORT || 8080; // Define PORT before using it
-app.listen(PORT, () => {
-    console.log(`Server is running on port ${PORT}`);
-});
+const PORT = process.env.PORT || 8080;
 
-module.exports = app; // for testing only
+mongoose.connect(process.env.MONGO_URI)
+  .then(() => {
+    console.log('MongoDB connected');
+    app.listen(PORT, () => {
+      console.log(`Server is running on port ${PORT}`);
+    });
+  })
+  .catch(err => {
+    console.error('MongoDB connection failed:', err.message);
+    process.exit(1);
+  });
+
+module.exports = app;
