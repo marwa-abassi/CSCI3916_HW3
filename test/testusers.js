@@ -53,4 +53,22 @@ describe('Register, Login User', () => {
             let token = signinRes.body.token;
         });
     });
+
+    describe('/signup duplicate', () => {
+        before(async () => {
+            // Ensure user exists
+            await User.deleteOne({ name: 'test' });
+            await chai.request(server).post('/signup').send(login_details);
+        });
+
+        it('should fail to register with existing username', async () => {
+            const duplicateRes = await chai.request(server)
+                .post('/signup')
+                .send(login_details);
+                
+            duplicateRes.should.have.status(409);
+            duplicateRes.body.success.should.be.eql(false);
+            duplicateRes.body.message.should.include('already exists');
+        });
+    });
 });

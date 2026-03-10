@@ -57,7 +57,7 @@ router.post('/signup', async (req, res) => { // Use async/await
 
 router.post('/signin', async (req, res) => { // Use async/await
   try {
-    const user = await User.findOne({ username: req.body.username }).select('name username password');
+    const user = await User.findOne({ username: req.body.username }).select('+password');
 
     if (!user) {
       return res.status(401).json({ success: false, msg: 'Authentication failed. User not found.' }); // 401 Unauthorized
@@ -79,6 +79,8 @@ router.post('/signin', async (req, res) => { // Use async/await
 });
 
 router.route('/movies')
+    .put((req, res) => res.status(405).json({ success: false, message: 'PUT on /movies not allowed' }))
+    .delete((req, res) => res.status(405).json({ success: false, message: 'DELETE on /movies not allowed' }))
     .get(authJwtController.isAuthenticated, async (req, res) => {
         try {
             const movies = await Movie.find({});
@@ -91,6 +93,10 @@ router.route('/movies')
     .post(authJwtController.isAuthenticated, async (req, res) => {
         if (!req.body.title || !req.body.releaseDate || !req.body.genre || !req.body.actors || req.body.actors.length === 0) {
             return res.status(400).json({ success: false, message: 'Movie must have title, releaseDate, genre, and at least one actor' });
+        }
+        const invalidActor = req.body.actors.some(a => !a || !a.actorName || !a.characterName);
+        if (invalidActor) {
+            return res.status(400).json({ success: false, message: 'Each actor must have actorName and characterName' });
         }
         try {
             const movie = new Movie(req.body);
@@ -107,6 +113,7 @@ router.route('/movies')
     });
 
 router.route('/movies/:title')
+    .post((req, res) => res.status(405).json({ success: false, message: 'POST on /movies/:title not allowed' }))
     .get(authJwtController.isAuthenticated, async (req, res) => {
         try {
             const movie = await Movie.findOne({ title: req.params.title });

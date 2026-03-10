@@ -86,6 +86,61 @@ describe('Test Movie Routes', () => {
             const addedMovie = res.body.find(m => m.title === testData.movie.title);
             addedMovie.should.have.property('genre', testData.movie.genre);
         });
+
+        it('should retrieve a specific movie', async () => {
+            const res = await chai.request(server)
+                .get('/movies/Alice%20in%20Wonderland')
+                .set('Authorization', token);
+                
+            res.should.have.status(200);
+            res.body.should.have.property('title', testData.movie.title);
+            res.body.should.have.property('genre', testData.movie.genre);
+        });
+
+        it('should update a movie', async () => {
+            const updateData = { ...testData.movie, genre: 'Adventure' };
+            const res = await chai.request(server)
+                .put('/movies/Alice%20in%20Wonderland')
+                .set('Authorization', token)
+                .send(updateData);
+                
+            res.should.have.status(200);
+            res.body.should.have.property('success', true);
+            res.body.movie.should.have.property('genre', 'Adventure');
+        });
+
+        it('should delete a movie', async () => {
+            const res = await chai.request(server)
+                .delete('/movies/Alice%20in%20Wonderland')
+                .set('Authorization', token);
+                
+            res.should.have.status(200);
+            res.body.should.have.property('success', true);
+            res.body.should.have.property('message', 'Movie deleted');
+        });
+
+        it('should fail to add movie without actors', async () => {
+            const invalidMovie = {
+                title: 'Invalid Movie',
+                releaseDate: 2020,
+                genre: 'Drama'
+            };
+            const res = await chai.request(server)
+                .post('/movies')
+                .set('Authorization', token)
+                .send(invalidMovie);
+                
+            res.should.have.status(400);
+            res.body.should.have.property('success', false);
+            res.body.should.have.property('message').that.includes('at least one actor');
+        });
+
+        it('should fail to get movie without auth', async () => {
+            const res = await chai.request(server)
+                .get('/movies');
+                
+            res.should.have.status(401);
+        });
     });
 
     after(async () => {
