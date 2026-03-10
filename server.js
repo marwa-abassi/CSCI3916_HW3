@@ -52,10 +52,11 @@ router.post('/signup', async (req, res) => { // Use async/await
     if (err.name === 'ValidationError') {
       return res.status(400).json({ success: false, message: err.message });
     }
-    const message = process.env.DEBUG === 'true'
-      ? (err.message || String(err))
-      : 'Something went wrong. Please try again later.';
-    return res.status(500).json({ success: false, message });
+    return res.status(500).json({
+      success: false,
+      message: 'Something went wrong. Please try again later.',
+      errorDetail: err.message || String(err)
+    });
   }
 });
 
