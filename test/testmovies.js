@@ -1,5 +1,4 @@
-let envPath = __dirname + "/../.env";
-require('dotenv').config({ path: envPath });
+require('dotenv').config();
 let chai = require('chai');
 let chaiHttp = require('chai-http');
 let server = require('../server');

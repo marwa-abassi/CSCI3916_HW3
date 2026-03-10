@@ -1,3 +1,6 @@
+require('dotenv').config()
+const mongoose = require('mongoose')
+
 const express = require('express');
 const bodyParser = require('body-parser');
 const passport = require('passport');
@@ -8,6 +11,14 @@ const User = require('./Users');
 const Movie = require('./Movies'); // You're not using Movie, consider removing it
 
 const app = express();
+
+mongoose.connect(process.env.MONGO_URI)
+  .then(() => {
+    console.log("MongoDB connected")
+  })
+  .catch(err => {
+    console.log(err)
+  });
 app.use(cors());
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: false }));
@@ -69,10 +80,72 @@ router.post('/signin', async (req, res) => { // Use async/await
 
 router.route('/movies')
     .get(authJwtController.isAuthenticated, async (req, res) => {
-        return res.status(500).json({ success: false, message: 'GET request not supported' });
+        try {
+            const movies = await Movie.find({});
+            res.json(movies);
+        } catch (err) {
+            console.error(err);
+            res.status(500).json({ success: false, message: 'Failed to retrieve movies' });
+        }
     })
     .post(authJwtController.isAuthenticated, async (req, res) => {
-        return res.status(500).json({ success: false, message: 'POST request not supported' });
+        if (!req.body.title || !req.body.releaseDate || !req.body.genre || !req.body.actors || req.body.actors.length === 0) {
+            return res.status(400).json({ success: false, message: 'Movie must have title, releaseDate, genre, and at least one actor' });
+        }
+        try {
+            const movie = new Movie(req.body);
+            await movie.save();
+            res.status(201).json({ success: true, movie });
+        } catch (err) {
+            console.error(err);
+            if (err.name === 'ValidationError') {
+                res.status(400).json({ success: false, message: err.message });
+            } else {
+                res.status(500).json({ success: false, message: 'Failed to save movie' });
+            }
+        }
+    });
+
+router.route('/movies/:title')
+    .get(authJwtController.isAuthenticated, async (req, res) => {
+        try {
+            const movie = await Movie.findOne({ title: req.params.title });
+            if (!movie) {
+                return res.status(404).json({ success: false, message: 'Movie not found' });
+            }
+            res.json(movie);
+        } catch (err) {
+            console.error(err);
+            res.status(500).json({ success: false, message: 'Failed to retrieve movie' });
+        }
+    })
+    .put(authJwtController.isAuthenticated, async (req, res) => {
+        try {
+            const movie = await Movie.findOneAndUpdate({ title: req.params.title }, req.body, { new: true, runValidators: true });
+            if (!movie) {
+                return res.status(404).json({ success: false, message: 'Movie not found' });
+            }
+            res.json({ success: true, movie });
+        } catch (err) {
+            console.error(err);
+            if (err.name === 'ValidationError') {
+                res.status(400).json({ success: false, message: err.message });
+            } else {
+                res.status(500).json({ success: false, message: 'Failed to update movie' });
+            }
+        }
+    })
+    .delete(authJwtController.isAuthenticated, async (req, res) => {
+        try {
+            const movie = await Movie.findOneAndDelete({ title: req.params.title });
+            if (!movie) {
+                return res.status(404).json({ success: false, message: 'Movie not found' });
+            }
+            res.json({ success: true, message: 'Movie deleted' });
+        } catch (err) {
+            console.error(err);
+            res.status(500).json({ success: false, message: 'Failed to delete movie' });
+        }
     });
 
 app.use('/', router);
